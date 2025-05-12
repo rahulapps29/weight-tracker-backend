@@ -2,11 +2,6 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-  },
   email: {
     type: String,
     required: true,
@@ -14,7 +9,25 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function () {
+      return !this.googleId; // password only required for non-Google users
+    },
+  },
+  googleId: {
+    type: String,
+    default: null,
+  },
+  firstName: {
+    type: String,
+    default: null,
+  },
+  lastName: {
+    type: String,
+    default: null,
+  },
+  picture: {
+    type: String,
+    default: null,
   },
   createdAt: {
     type: Date,
@@ -22,12 +35,15 @@ const userSchema = new mongoose.Schema({
   },
 });
 
+// Hash password if present and modified
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
+  if (this.password && this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
   next();
 });
 
+// Method to compare password for email login
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
